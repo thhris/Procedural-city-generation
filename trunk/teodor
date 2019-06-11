@@ -1,0 +1,275 @@
+#!/usr/bin/env python
+import nilgl
+from OpenGL.GLUT import *
+from OpenGL.GLU import *
+from OpenGL.GL import *
+from random import randint
+import random
+import clinput
+
+global number_building_rows
+global map_grid
+
+number_building_rows = clinput.user_input() # specifies the number of buildings on one row
+city_size = (number_building_rows * 2) * (number_building_rows * 2) # number of cells a building can be placed upon
+map_grid = [0] * (city_size) # a grid representation of the city map
+
+def display ():
+    global CX, CY, CZ, VX, VY, VZ, UX, UY, UZ
+    global OBJ
+
+    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    glColor (1.0, 1.0, 1.0)
+
+    glPushMatrix ()
+    glMatrixMode (GL_MODELVIEW)
+    glLoadIdentity ()
+    glMultMatrixf (nilgl.gtm)
+    CX, CY, CZ, VX, VY, VZ, UX, UY, UZ = nilgl.get_viewpoint ()    
+    gluLookAt (CX, CY, CZ,  VX, VY, VZ,  UX, UY, UZ)
+
+    glCallList (OBJ)
+
+    glPopMatrix ()
+    #Display city
+    glutSwapBuffers ()
+
+def texture_picker(num):
+	if(num in range(1,6)):
+		glBindTexture (GL_TEXTURE_2D, apartment_texture)
+	elif(num in range(6,9)):
+		glBindTexture (GL_TEXTURE_2D, office_texture),
+	elif(num in range(9,11)):
+		glBindTexture (GL_TEXTURE_2D, bussiness_texture),
+	elif(num == 11):
+		glBindTexture (GL_TEXTURE_2D, new_apartment_texture)
+
+def draw_building(x, y, z):
+
+	glBegin(GL_QUADS)
+	#front
+	glTexCoord2f(0.0, 0.0) # maps 2d texture to 1 3d vertex\
+	glVertex3f(x,0,z+1);
+	glTexCoord2f(1, 0.0)
+	glVertex3f(x+1,0,z+1);
+	glTexCoord2f(1, y)
+	glVertex3f(x+1,y,z+1);
+	glTexCoord2f(0.0, y)
+	glVertex3f(x,y,z+1);
+
+	#back
+	glTexCoord2f(0.0, 0.0)
+	glVertex3f(x+1,0,z);
+	glTexCoord2f(1, 0.0)
+	glVertex3f(x,0,z);
+	glTexCoord2f(1, y)
+	glVertex3f(x,y,z);
+	glTexCoord2f(0.0, y)
+	glVertex3f(x+1,y,z);
+
+	#right
+	glTexCoord2f(1, y)
+	glVertex3f(x+1,y,z+1);
+	glTexCoord2f(1, 0.0)
+	glVertex3f(x+1,0,z+1);
+	glTexCoord2f(0.0, 0.0)
+	glVertex3f(x+1,0,z);
+	glTexCoord2f(0.0, y)
+	glVertex3f(x+1,y,z);
+
+	#left
+	glTexCoord2f(0.0, 0.0)
+	glVertex3f(x,0,z+1);
+	glTexCoord2f(0.0, y)
+	glVertex3f(x,y,z+1);
+	glTexCoord2f(1, y)
+	glVertex3f(x,y,z);
+	glTexCoord2f(1, 0.0)
+	glVertex3f(x,0,z);
+	glEnd();
+
+	#draw rooftop with a separate roof texture
+	glBindTexture (GL_TEXTURE_2D, roof_texture)
+	glBegin(GL_QUADS)
+	glTexCoord2f(0.0, 0.0)
+	glVertex3f(x+1,y,z);
+	glTexCoord2f(1.0, 0.0)
+	glVertex3f(x,y,z);
+	glTexCoord2f(1.0, 1.0)
+	glVertex3f(x,y,z+1);
+	glTexCoord2f(0.0, 1.0)
+	glVertex3f(x+1,y,z+1);
+	glEnd();
+
+def draw_city ():
+	global building_texture
+	global building_pos_y
+
+	glPushMatrix ()
+	glPushAttrib (GL_ENABLE_BIT)
+	glEnable (GL_TEXTURE_2D)
+	glEnable(GL_CULL_FACE);
+	
+	x = 0;
+	z = 0;
+	building_pos_y = [0] * (city_size)
+
+	for i in range(number_building_rows): #number of rows of buildings
+		for ii in range(number_building_rows): #number of columns of buildings
+			id = x * (number_building_rows*2) + z
+			map_grid[id] = 1
+			y = random.gauss(4, 1) #randint(1,5)
+			if y <= 0: # a check for negative height numbers
+				y = -y
+
+			building_pos_y[id] = y
+			texture_picker(randint(1,11))
+			draw_building(x, y, z)
+			z = z+2;
+
+		z = 0;
+		x = x+2;
+	glPopAttrib ()
+	glPopMatrix ()
+
+def draw_plane ():
+	global plane_texture
+	plane_size = number_building_rows*2
+
+	glPushMatrix ()
+	glPushAttrib (GL_ENABLE_BIT)
+	glEnable (GL_TEXTURE_2D)
+	glDisable (GL_DEPTH_TEST)
+	glDisable (GL_LIGHTING)
+	glDisable (GL_BLEND)
+	glColor4f (1.0, 1.0, 1.0, 1.0)
+	glBindTexture (GL_TEXTURE_2D, plane_texture)
+
+	glBegin(GL_QUADS)
+	glColor (0.5, 0.1, 0.5)
+	n = 0;
+	z = 0;
+
+	for x in range(plane_size):
+		for t in range(plane_size):
+			glTexCoord2f(0.0, 0.0)
+			glVertex3f(n,0,z);
+			glTexCoord2f(0.0, 1.0)
+			glVertex3f(n+1,0,z);
+			glTexCoord2f(1.0, 1.0)
+			glVertex3f(n+1,0,z+1);
+			glTexCoord2f(1.0, 0.0)
+			glVertex3f(n,0,z+1);
+			z = z+1;
+		z = 0;
+		n = n+1;
+	glEnd();
+	glPopAttrib ()
+	glPopMatrix ()
+
+
+def collisionMouse (x, y):
+    if x > nilgl.lastx:    nilgl.rotate_horizontally (-nilgl.default_angle)
+    elif x < nilgl.lastx:  nilgl.rotate_horizontally (nilgl.default_angle)
+
+    if y > nilgl.lasty:    check_collision ("l", x, y)
+    elif y < nilgl.lasty:  check_collision ("p", x, y)
+
+    nilgl.lastx = x
+    nilgl.lasty = y
+    glutPostRedisplay()
+
+def check_collision(k, x, y):
+	if k == "p":
+		(x, y, z) = (nilgl.CX, nilgl.CY, nilgl.CZ)
+		nilgl.move_forward(nilgl.default_step)
+
+		# collision detection for ground
+		if nilgl.CY < 0.5:
+			nilgl.CY = 0.5
+
+		#collision detection for map borders
+		if nilgl.CX < 0 or nilgl.CZ < 0 or nilgl.CX > number_building_rows*2 or nilgl.CZ > number_building_rows*2:
+				nilgl.CX, nilgl.CZ = (x,z)
+
+		#collision detection for buildings
+		id  = int(nilgl.CX) * (number_building_rows * 2) + int(nilgl.CZ) # building identifier
+		if(map_grid[id] == 1 and nilgl.CY < building_pos_y[id]):
+			nilgl.CX, nilgl.CY, nilgl.CZ = (x,y,z)	
+		glutPostRedisplay()
+		return True
+
+	if k == "l":
+		(x, y, z) = (nilgl.CX, nilgl.CY, nilgl.CZ)
+		nilgl.move_forward(-nilgl.default_step)
+
+		# collision detection for ground
+		if nilgl.CY < 0.5:
+			nilgl.CY = 0.5
+
+		#collision detection for map borders
+		if nilgl.CX < 0 or nilgl.CZ < 0 or nilgl.CX > number_building_rows*2 or nilgl.CZ > number_building_rows*2: #do this if
+				nilgl.CX, nilgl.CZ = (x,z)
+
+		#collision detection for buildings
+		id  = int(nilgl.CX) * (number_building_rows * 2) + int(nilgl.CZ)
+		if(map_grid[id] == 1 and nilgl.CY < building_pos_y[id]):
+			nilgl.CX, nilgl.CY, nilgl.CZ = (x,y,z)	 
+
+		glutPostRedisplay()
+		return True
+	return False
+
+nilgl.keyboard_callback = check_collision
+
+
+#Save the name of the texture
+concrete_image = "textures/concrete_texture.jpg"
+apartment_image = "textures/apartment_tex.jpg"
+office_image = "textures/office_tex.jpg"
+bussiness_image = "textures/bussiness_tex.jpg"
+new_apartment_image = "textures/new_apartments_tex.jpg"
+roof_image = "textures/roof_texture.jpg"
+
+# Initialize OpenGL.
+glutInit (sys.argv)
+glutInitDisplayMode (GLUT_DOUBLE | GLUT_DEPTH | GLUT_RGBA)
+nilgl.init (sys.argv)
+glClearColor (0.3, 0.3, 0.3, 0)
+
+#create a display list with 
+OBJ = glGenLists (1)
+glNewList (OBJ, GL_COMPILE)
+
+#Load textures using NilGL and save the shader as a variable.
+#Texture currently needs to be in the same directory
+plane_texture = nilgl.load_texture (concrete_image, mipmap=True)
+apartment_texture = nilgl.load_texture (apartment_image, mipmap=True)
+office_texture = nilgl.load_texture (office_image, mipmap=True)
+bussiness_texture = nilgl.load_texture (bussiness_image, mipmap=True)
+new_apartment_texture = nilgl.load_texture (new_apartment_image, mipmap=True)
+roof_texture = nilgl.load_texture (roof_image, mipmap=True)
+
+nilgl.draw_sky ()
+draw_plane()#call function to draw city plane
+draw_city() #call function to draw buildings
+glEndList ()
+
+# Register the OpenGL callbacks.
+glutReshapeFunc (nilgl.reshape)
+glutKeyboardFunc (nilgl.keyboard)
+glutSpecialFunc (nilgl.special)
+glutMouseFunc (nilgl.click)
+glutMotionFunc (collisionMouse)
+glutIdleFunc (nilgl.idle)
+glutDisplayFunc (display)
+
+height = 0.3
+
+#initial camera position
+CX, CY, CZ, VX, VY, VZ, UX, UY, UZ = 7.5, height, 5,  8, height, 20,  0, 1, 0
+nilgl.set_viewpoint (CX, CY, CZ, VX, VY, VZ, UX, UY, UZ)
+nilgl.command_listener_begin ()
+glutMainLoop ()
+
+sys.exit (1)

@@ -1,0 +1,21 @@
+# The standard keystrokes recognised by NIL applications.
+
+q Q: quit
+w W: walk_mode
+f F: fly_mode
+v V: view_mode
+p P: move_forward
+l L: move_backward
+u U: move_up
+n N: move_down
+z Z: move_left
+x X: move_right
+e E: turn_up
+d D: turn_down
+a A: turn_left
+s S: turn_right
++: increase_step
+-: decrease_step
+<: increase_angle
+>: decrease_angle
+r R: reset_viewpoint
